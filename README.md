@@ -1,7 +1,8 @@
 # Savorella
 <p align="center">
-<img src="assets/images/logo.png)" alt="Savorella Logo" width="200">
+<img src="./assets/images/logo.png" alt="Savorella Logo" width="200">
 </p>
+
 ## Overview
 
 Savorella is a mobile application built with React Native and Expo that helps users [brief description of app purpose]. The application features a robust authentication system with email/password and Google sign-in options, user role management, and personalized user journeys.
