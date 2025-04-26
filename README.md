@@ -1,6 +1,6 @@
 # Savorella
 <p align="center">
-<img src="./assets/images/logo.png)" alt="Savorella Logo" width="200">
+<img src="/assets/images/logo.png)" alt="Savorella Logo" width="200">
 </p>
 ## Overview
 
