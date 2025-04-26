@@ -1,7 +1,7 @@
 # Savorella
-
+<p align="center">
 ![Savorella Logo](./assets/images/logo.png)
-
+</p>
 ## Overview
 
 Savorella is a mobile application built with React Native and Expo that helps users [brief description of app purpose]. The application features a robust authentication system with email/password and Google sign-in options, user role management, and personalized user journeys.
@@ -70,8 +70,3 @@ Savorella is a mobile application built with React Native and Expo that helps us
    npx expo start
    ```
 
-## Configuration
-
-### Firebase Setup
-
-Create a `firebaseConfig.js` file in the root directory with your Firebase credentials:
