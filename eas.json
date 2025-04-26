@@ -1,0 +1,30 @@
+{
+  "cli": {
+    "version": ">= 7.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "node": "18.18.2"
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_IMAGE_UTILS_NO_SHARP": "1"
+      },
+      "node": "18.18.2"
+    },
+    "production": {
+      "autoIncrement": true,
+      "node": "18.18.2"
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

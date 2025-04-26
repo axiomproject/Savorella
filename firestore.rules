@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if a user is an admin
+    function isAdmin() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    match /users/{userId} {
+      // Allow any authenticated user to read any user document
+      allow read: if request.auth != null;
+      
+      // Allow admin users to write any user document
+      allow write: if isAdmin();
+      
+      // Allow users to write their own document
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // Allow authenticated user to read/write their own mealPlans subcollection
+      // PLUS allow admin access to any user's meal plans
+      match /mealPlans/{planId} {
+        // User can access their own meal plans
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        
+        // Admin can access any user's meal plans
+        allow read, write: if isAdmin();
+      }
+    }
+    
+    match /posts/{postId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /reports/{reportId} {
+      // Allow only authenticated users to create reports
+      allow create: if request.auth != null;
+      
+      // Optionally, restrict read/update/delete to admins only:
+      allow read, update, delete: if isAdmin();
+    }
+    
+    // Public meal plans collection rules
+    match /publicMealPlans/{planId} {
+      // Allow all authenticated users to read public meal plans
+      allow read: if request.auth != null;
+      
+      // Only admin users can create, update, or delete public meal plans
+      allow write: if isAdmin();
+    }
+  }
+}
