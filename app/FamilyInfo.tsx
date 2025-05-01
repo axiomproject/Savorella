@@ -105,7 +105,7 @@ export default function FamilyInfo() {
     <View style={styles.container}>
       {/* Purple Header */}
       <View style={styles.header}>
-        <Text style={styles.headerText}></Text>
+        <Text style={styles.headerText}>Family Info</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
@@ -289,7 +289,7 @@ export default function FamilyInfo() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   header: {
-    backgroundColor: "#7c3aed",
+    backgroundColor: "rgb(46, 105, 48)",
     height: Platform.OS === "ios" ? 120 : 100,
     justifyContent: "flex-end",
     alignItems: "center",
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginHorizontal: 4,
     alignItems: "center",
-    shadowColor: "#7c3aed",
+    shadowColor: "#22c55e",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 17,
-    color: "#7c3aed",
+    color: "#22c55e",
     fontWeight: "bold",
     marginBottom: 8,
   },
@@ -381,14 +381,14 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#e0e7ff",
+    backgroundColor: "#bbf7d0",
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: 8,
   },
   counterButtonText: {
     fontSize: 22,
-    color: "#7c3aed",
+    color: "#22c55e",
     fontWeight: "bold",
   },
   counterValue: {
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f8ff",
     borderRadius: 12,
     padding: 14,
-    shadowColor: "#7c3aed",
+    shadowColor: "#22c55e",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -441,13 +441,13 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: 30,
-    backgroundColor: "#7c3aed",
+    backgroundColor: "#22c55e",
     borderRadius: 24,
     paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
     width: "100%",
-    shadowColor: "#7c3aed",
+    shadowColor: "#22c55e",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
     shadowRadius: 8,
@@ -476,15 +476,15 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: "#7c3aed",
+    borderColor: "#22c55e",
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 7,
   },
   checkboxChecked: {
-    backgroundColor: "#7c3aed",
-    borderColor: "#7c3aed",
+    backgroundColor: "#22c55e",
+    borderColor: "#22c55e",
   },
   checkboxLabel: {
     fontSize: 15,

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Savorella",
     "slug": "savorella",
-    "scheme": "savorella",
+    "scheme": "com.qcu.savorella",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
@@ -24,22 +24,27 @@
         "backgroundColor": "#243407"
       },
       "package": "com.qcu.savorella",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "SCHEDULE_EXACT_ALARM",
         "USE_EXACT_ALARM"
-      ]
+      ],
+      "compileSdkVersion": 34
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+           "@react-native-firebase/app",
+        "@react-native-google-signin/google-signin",
       [
         "expo-notifications",
         {
           "icon": "./assets/images/notification.png",
           "color": "#2e6930"
         }
+   
       ]
     ],
     "experiments": {

@@ -5,24 +5,24 @@
 
 ## Overview
 
-Savorella is a mobile application built with React Native and Expo that helps users [brief description of app purpose]. The application features a robust authentication system with email/password and Google sign-in options, user role management, and personalized user journeys.
+Savorella is an easy-to-use meal-planning app designed to help families maintain healthy eating. It creates personalized meal plans based on your dietary preferences, family size, and nutritional needs. Users can select from various diets and generate grocery lists tailored to their chosen meals. With a simple setup, Savorella ensures that each meal plan aligns with your family's lifestyle. Whether planning for the week or seeking kid-friendly meals, Savorella makes meal prep easier, saving you time, reducing food waste, and helping you enjoy nutritious, delicious meals.
 
 ## Features
 
-- **User Authentication**
-  - Email and password sign-in
-  - Google OAuth authentication
-  - Password reset functionality
-  - Email verification
-  - User registration with validation
+- **Nutritional Tracking**
+  - Savorella helps parents monitor their children's daily nutrient intake, ensuring a balanced diet tailored to their needs.
 
-- **User Roles**
-  - Regular user accounts
-  - Admin accounts with special privileges
+- **Real-Time Calorie & Nutrient Monitoring**
+  - Parents can track their child’s caloric intake, vitamins, and macronutrients to ensure they’re meeting their daily requirements.
 
-- **User Profile Management**
-  - Family information collection
-  - Profile customization
+- **Meal Planning & Smart Recommendations**
+  - The app provides healthy meal suggestions based on age, dietary needs, and preferences, making it easier for parents to plan nutritious meals.
+
+- **Family Meal Planning & Grocery Lists**
+  - Simplify shopping with automated grocery lists based on weekly meal plans to ensure balanced nutrition for the entire family.
+
+- **Educational Resources & Parental Guidance**
+  - Access expert-backed nutritional advice, meal prep guides, and interactive lessons to teach parents about healthy eating habits.
 
 ## Technology Stack
 

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1091784879284",
+    "project_id": "savorella-1aa63",
+    "storage_bucket": "savorella-1aa63.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1091784879284:android:0709771e50e67a98a27be1",
+        "android_client_info": {
+          "package_name": "com.qcu.savorella"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1091784879284-dduqmnp878soa428b9g4f6v6dmq13smb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.qcu.savorella",
+            "certificate_hash": "3328ae6e6e35a602bb602162665e01291aa26b00"
+          }
+        },
+        {
+          "client_id": "1091784879284-ve7umc471v41sjq02tp19hc5mtrt8ouc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7cSNAfGowmOB5K6nW4vc0sFvRaMkyyGo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1091784879284-ve7umc471v41sjq02tp19hc5mtrt8ouc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

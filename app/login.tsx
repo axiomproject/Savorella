@@ -8,16 +8,39 @@ import { auth } from "../firebaseConfig";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithCredential, updateProfile, sendPasswordResetEmail, sendEmailVerification } from "firebase/auth";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebaseConfig"; // Assuming db is exported from firebaseConfig
-import * as Google from "expo-auth-session/providers/google";
-import { makeRedirectUri } from "expo-auth-session";
+import * as AuthSession from "expo-auth-session";
+import { AuthRequest } from "expo-auth-session";
 import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from 'expo-web-browser';
+import Constants from "expo-constants";
 
 // Ensure web browser redirect results are handled properly
 WebBrowser.maybeCompleteAuthSession();
 
 // Add your admin email(s) here
 const ADMIN_EMAILS = ["admin@example.com"];
+
+// Replace "com.yourappname" with your actual Android package name from app.json/app.config.js
+const ANDROID_PACKAGE_NAME = "com.qcu.savorella"; // <-- update this if needed
+
+const isExpoGo = Constants.appOwnership === "expo";
+
+// Google OAuth config
+const CLIENT_ID = "1091784879284-dduqmnp878soa428b9g4f6v6dmq13smb.apps.googleusercontent.com";
+const REDIRECT_URI = AuthSession.makeRedirectUri(
+  isExpoGo
+    ? {}
+    : {
+        scheme: ANDROID_PACKAGE_NAME,
+        // Remove the path to avoid unmatched route error
+        // path: "/oauthredirect",
+      }
+);
+
+const DISCOVERY = {
+  authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+  tokenEndpoint: "https://oauth2.googleapis.com/token",
+};
 
 export default function LoginScreen() {
   const [activeTab, setActiveTab] = useState<"signIn" | "signUp">("signIn");
@@ -39,53 +62,6 @@ export default function LoginScreen() {
   const [errorMessage, setErrorMessage] = useState<{ text: string; type: "error" | "success" } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const navigation = useNavigation();
-
-  // Updated Google Auth Session with properly configured redirect URI
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: "1091784879284-0soqm9ama0v9re2mral9kkp70jg8o937.apps.googleusercontent.com",
-    webClientId: "1091784879284-ve7umc471v41sjq02tp19hc5mtrt8ouc.apps.googleusercontent.com",
-    // Use Expo's standard redirect URI format - make sure this matches what's in Google Console
-    redirectUri: makeRedirectUri({
-      scheme: "savorella"
-    }),
-    // For extra security
-    scopes: ['profile', 'email']
-  });
-
-  // Handle Google sign-in response
-  React.useEffect(() => {
-    if (response?.type === "success") {
-      try {
-        const { id_token, access_token } = response.params;
-        
-        // Make sure we have the tokens
-        if (!id_token) {
-          throw new Error("No ID token received from Google");
-        }
-
-        const credential = GoogleAuthProvider.credential(
-          id_token,
-          access_token
-        );
-
-        signInWithCredential(auth, credential)
-          .then((userCredential) => {
-            console.log("Successfully signed in with Google");
-            router.replace("/dashboard");
-          })
-          .catch((error: Error) => {
-            console.error("Google sign-in error:", error);
-            Alert.alert("Google Sign-In Error", error.message);
-          });
-      } catch (error) {
-        console.error("Error processing Google response:", error);
-        Alert.alert("Authentication Error", "There was a problem processing your Google sign-in.");
-      }
-    } else if (response?.type === "error") {
-      console.error("Auth response error:", response.error);
-      Alert.alert("Authentication Error", "Failed to authenticate with Google. Please try again.");
-    }
-  }, [response]);
 
   // Load custom fonts
   const [customFontsLoaded] = useCustomFonts({
@@ -163,24 +139,71 @@ export default function LoginScreen() {
 
   const handleGoogleSignIn = async () => {
     try {
-      // Log URI being used for debugging
-      const redirectUri = makeRedirectUri({
-        scheme: "savorella"
+      const request = new AuthRequest({
+        clientId: CLIENT_ID,
+        redirectUri: REDIRECT_URI,
+        responseType: "code",
+        scopes: ["openid", "profile", "email"],
+        usePKCE: true,
+        extraParams: { access_type: "offline", prompt: "consent" }
       });
-      console.log("Using Google Sign-In with redirect URI:", redirectUri);
-      
-      // Make sure we have a valid request before proceeding
-      if (!request) {
-        console.log("Google auth request not ready yet");
-        Alert.alert("Error", "Google sign-in is not ready. Please try again.");
-        return;
+      await request.makeAuthUrlAsync(DISCOVERY);
+
+      const result = await request.promptAsync(DISCOVERY);
+
+      if (result.type === "success" && result.params?.code) {
+        // Exchange code for tokens
+        const tokenResponse = await AuthSession.exchangeCodeAsync(
+          {
+            clientId: CLIENT_ID,
+            code: result.params.code,
+            redirectUri: REDIRECT_URI,
+            extraParams: { code_verifier: request.codeVerifier ?? "" }
+          },
+          DISCOVERY
+        );
+
+        const idToken = tokenResponse.idToken;
+        if (idToken) {
+          const credential = GoogleAuthProvider.credential(idToken);
+          const userCredential = await signInWithCredential(auth, credential);
+
+          // Firestore user doc logic
+          const userDocRef = doc(db, "users", userCredential.user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            if (userData.isAdmin) {
+              setIsAdmin(true);
+              router.replace("/admin/AdminDashboard");
+            } else if (!userData.familyInfoCompleted) {
+              setIsAdmin(false);
+              router.replace("/FamilyInfo");
+            } else {
+              setIsAdmin(false);
+              router.replace("/dashboard");
+            }
+          } else {
+            const isAdmin = ADMIN_EMAILS.includes(userCredential.user.email || "");
+            await setDoc(userDocRef, {
+              name: userCredential.user.displayName || "",
+              email: userCredential.user.email || "",
+              createdAt: serverTimestamp(),
+              isAdmin,
+              familyInfoCompleted: false,
+            });
+            setIsAdmin(isAdmin);
+            router.replace(isAdmin ? "/admin/AdminDashboard" : "/FamilyInfo");
+          }
+        } else {
+          Alert.alert("Google Sign-In Error", "No ID token found in token response.");
+        }
+      } else if (result.type === "cancel" || result.type === "dismiss") {
+        Alert.alert("Google Sign-In Cancelled", "Authentication was cancelled.");
       }
-      
-      const result = await promptAsync();
-      console.log("Google sign-in attempt result:", result);
-    } catch (error) {
-      console.error("Google sign-in prompt error:", error);
-      Alert.alert("Error", "Failed to open Google sign-in. Please try again.");
+    } catch (error: any) {
+      console.error("Google sign-in error:", error);
+      Alert.alert("Google Sign-In Error", error.message || "There was a problem processing your Google sign-in.");
     }
   };
 

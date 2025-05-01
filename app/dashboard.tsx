@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, ReactNode, Fragment } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Platform, Modal } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Platform, Modal, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import UserDock from "../components/UserDock";
@@ -8,6 +8,7 @@ import { auth, db } from "../firebaseConfig";
 import { doc, getDoc, updateDoc, collection, getDocs, query, orderBy } from "firebase/firestore";
 import { mealDishes } from "../data/mealDishes";
 import * as Progress from "react-native-progress";
+import * as Notifications from 'expo-notifications';
 
 const HEADER_HEIGHT = 150; // Increased height
 
@@ -123,6 +124,15 @@ type UserData = {
   parentName: string;
 };
 
+// Configure notifications
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 export default function DashboardScreen() {
   const [selectedPerson, setSelectedPerson] = useState("Select Family Member");
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -177,6 +187,95 @@ export default function DashboardScreen() {
   
   const scales = useRef([new Animated.Value(1), new Animated.Value(1), new Animated.Value(1)]).current;
 
+  // Add state for tracking notification IDs
+  const [notificationIds, setNotificationIds] = useState<Record<string, string>>({});
+
+  // Function to request notification permissions
+  const requestNotificationPermissions = async () => {
+    try {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      
+      if (finalStatus !== 'granted') {
+        Alert.alert(
+          "Permission Required",
+          "To receive meal reminders, please enable notifications for this app in your device settings.",
+          [{ text: "OK" }]
+        );
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error("Error requesting notification permissions:", error);
+      return false;
+    }
+  };
+
+  // Move the Android notification channel setup here:
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        sound: "default",
+      });
+    }
+  }, []);
+
+  // Function to schedule a notification
+  const scheduleNotification = async (mealName: string, time: string, personName: string): Promise<string | null> => {
+    try {
+      // Parse the time
+      const { hours, minutes, ampm } = parseTime(time);
+      
+      // Convert to 24-hour format for scheduling
+      let hour24 = hours;
+      if (ampm === 'PM' && hours < 12) hour24 += 12;
+      if (ampm === 'AM' && hours === 12) hour24 = 0;
+      
+      // Schedule the notification with the correct trigger format (daily)
+      // Explicitly cast to CalendarNotificationTriggerInput to satisfy TS
+      const id = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `${mealName} Reminder`,
+          body: `Hey ${personName}, it's time for your ${mealName.toLowerCase()}!`,
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+          data: { mealType: mealName, personName },
+        },
+        // @ts-ignore
+        trigger: {
+          type: 'calendar',
+          hour: hour24,
+          minute: minutes,
+          repeats: true,
+          channelId: 'default',
+        },
+      });
+      
+      return id;
+    } catch (error) {
+      console.error(`Error scheduling notification for ${mealName}:`, error);
+      return null;
+    }
+  };
+
+  // Function to cancel a notification
+  const cancelNotification = async (notificationId: string | null) => {
+    if (notificationId) {
+      try {
+        await Notifications.cancelScheduledNotificationAsync(notificationId);
+      } catch (error) {
+        console.error("Error canceling notification:", error);
+      }
+    }
+  };
+
   // Function to format time from hours/minutes/ampm
   const formatTime = (hours: number, minutes: number, ampm: string): string => {
     return `${hours}:${minutes.toString().padStart(2, "0")} ${ampm}`;
@@ -217,19 +316,43 @@ export default function DashboardScreen() {
   };
 
   // Handle saving the time from custom picker
-  const handleSaveTime = () => {
+  const handleSaveTime = async () => {
     if (editingMeal === null) return;
 
     const { hours, minutes, ampm } = timePickerModal;
     const formattedTime = formatTime(hours, minutes, ampm);
 
     const updatedReminders = [...mealReminders];
-    updatedReminders[editingMeal.index].time = formattedTime;
+    const mealIdx = editingMeal.index;
+    updatedReminders[mealIdx].time = formattedTime;
     setMealReminders(updatedReminders);
 
     // Save to Firebase if a person is selected
     if (selectedPerson !== "Select Family Member") {
       saveMealReminderToFirebase(selectedPerson, updatedReminders);
+      
+      // If the reminder is enabled, update the notification
+      if (updatedReminders[mealIdx].enabled) {
+        const key = `${selectedPerson}-${updatedReminders[mealIdx].label}`;
+        
+        // Cancel existing notification
+        await cancelNotification(notificationIds[key]);
+        
+        // Schedule new notification with updated time
+        const notifId = await scheduleNotification(
+          updatedReminders[mealIdx].label,
+          formattedTime,
+          selectedPerson
+        );
+        
+        // Update notification ID
+        if (notifId) {
+          setNotificationIds(prev => ({
+            ...prev,
+            [key]: notifId
+          }));
+        }
+      }
     }
 
     // Close the picker
@@ -265,8 +388,8 @@ export default function DashboardScreen() {
     }));
   };
 
-  // Toggle meal reminder enabled state
-  const handleToggleMeal = (idx: number) => {
+  // Modified toggle meal reminder enabled state
+  const handleToggleMeal = async (idx: number) => {
     Animated.sequence([
       Animated.timing(scales[idx], {
         toValue: 1.2,
@@ -281,14 +404,53 @@ export default function DashboardScreen() {
     ]).start();
 
     const updatedReminders = [...mealReminders];
-    updatedReminders[idx].enabled = !updatedReminders[idx].enabled;
-    setMealReminders(updatedReminders);
-
-    // Save to Firebase if a person is selected
+    const newEnabledState = !updatedReminders[idx].enabled;
+    updatedReminders[idx].enabled = newEnabledState;
+    
+    // If enabling the reminder, schedule a notification
     if (selectedPerson !== "Select Family Member") {
+      if (newEnabledState) {
+        // Request permissions first
+        const hasPermission = await requestNotificationPermissions();
+        if (hasPermission) {
+          // Schedule notification
+          const meal = updatedReminders[idx];
+          const notifId = await scheduleNotification(
+            meal.label, 
+            meal.time, 
+            selectedPerson
+          );
+          
+          // Save notification ID
+          if (notifId) {
+            setNotificationIds(prev => ({
+              ...prev,
+              [`${selectedPerson}-${meal.label}`]: notifId
+            }));
+          }
+        }
+      } else {
+        // Cancel notification if disabling
+        const key = `${selectedPerson}-${updatedReminders[idx].label}`;
+        await cancelNotification(notificationIds[key]);
+        
+        // Remove notification ID
+        setNotificationIds(prev => {
+          const newIds = { ...prev };
+          delete newIds[key];
+          return newIds;
+        });
+      }
+      
+      // Save to Firebase
+      setMealReminders(updatedReminders);
       saveMealReminderToFirebase(selectedPerson, updatedReminders);
+    } else {
+      setMealReminders(updatedReminders);
     }
   };
+
+  
 
   // Save meal reminders to Firebase
   const saveMealReminderToFirebase = async (person: string, reminderData: any[]) => {
@@ -748,6 +910,66 @@ export default function DashboardScreen() {
       enabled: false,
     },
   ]);
+
+  // Add effect to request notification permissions when app loads
+  useEffect(() => {
+    requestNotificationPermissions();
+  }, []);
+
+  // Add effect to update notifications when selected person changes
+  useEffect(() => {
+    // Cancel all existing notifications for previous person
+    Object.keys(notificationIds).forEach(key => {
+      cancelNotification(notificationIds[key]);
+    });
+    
+    setNotificationIds({});
+    
+    // Schedule notifications for enabled reminders of new selected person
+    if (selectedPerson !== "Select Family Member") {
+      const scheduleMealNotifications = async () => {
+        for (let i = 0; i < mealReminders.length; i++) {
+          const meal = mealReminders[i];
+          if (meal.enabled) {
+            const notifId = await scheduleNotification(meal.label, meal.time, selectedPerson);
+            if (notifId) {
+              setNotificationIds(prev => ({
+                ...prev,
+                [`${selectedPerson}-${meal.label}`]: notifId
+              }));
+            }
+          }
+        }
+      };
+      
+      scheduleMealNotifications();
+    }
+  }, [selectedPerson]);
+
+  // Load meal reminders for selected person
+  useEffect(() => {
+    if (userData && selectedPerson !== "Select Family Member") {
+      const adult = userData.adults.find(a => a.name === selectedPerson);
+      const child = userData.children.find(c => c.name === selectedPerson);
+      const person = adult || child;
+      
+      if (person && person.mealReminders) {
+        // Use the person's saved meal reminders
+        setMealReminders(person.mealReminders.map((r: any, index: number) => ({
+          ...r,
+          // If label is missing, use default labels
+          label: r.label || (index === 0 ? "Breakfast" : index === 1 ? "Lunch" : "Dinner"),
+        })));
+      } else {
+        // Reset to default reminders
+        setMealReminders([
+          { label: "Breakfast", time: "7:30 AM", enabled: false },
+          { label: "Lunch", time: "12:00 PM", enabled: false },
+          { label: "Dinner", time: "6:30 PM", enabled: false },
+        ]);
+      }
+    }
+  }, [selectedPerson, userData]);
 
   return (
     <ErrorBoundary fallback={
@@ -1552,4 +1774,5 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold'
   }
+  
 });
